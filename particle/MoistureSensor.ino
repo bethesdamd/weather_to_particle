@@ -1,6 +1,6 @@
 // Read soil moisture sensor and photoresistor and write values to serial comms and particle, etc.
 // openweathermap.org bethesda city id = 4348599
-// http://api.openweathermap.org/data/2.5/forecast?id=4348599&appid=2de143494c0b295cca9337e1e96b00e0
+// http://api.openweathermap.org/data/2.5/forecast?id=<id>
 
 int powerOut = A5;
 int readMoisture = A0;
