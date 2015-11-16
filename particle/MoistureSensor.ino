@@ -15,12 +15,13 @@ int stepperDirection = A3; // CHECK THAT THIS PIN IS SUITABLE
 int button = D1;
 int last = 0;
 int m;
-bool buttonStatus = false;
-void calibrate(void);
+int buttonStatus = 0;
+bool buttonChange = false;
+void buttonChanged(void);
 
 void setup()
 {
-    attachInterrupt(button, buttonChange, CHANGE);
+    attachInterrupt(button, buttonChanged, CHANGE);
     pinMode(button, INPUT);
     pinMode(powerOut, OUTPUT);
     pinMode(ledBoard, OUTPUT);
@@ -69,14 +70,14 @@ void loop() {
         // First use `particle serial list` to see my online device address(es)
         Serial.println(analogValue);
     }
-    if (buttonStatus) {
+    if (buttonChange) {
         // Particle.publish("davidws:interrupt", "interrupt", 60, PRIVATE);
-        if (button == HIGH) {
+        if (buttonStatus == HIGH) {
           blinkLed(2);
         } else {
           blinkLed(1);
         }
-        buttonStatus = false;
+        buttonChange = false;
     }
 }
 
@@ -140,6 +141,7 @@ int remoteTest(String s) {
 
 // Need a calibration routine to position stepper at the starting position of the gauge
 
-void buttonChange() {
-    buttonStatus = true;
+void buttonChanged() {
+  buttonStatus = digitalRead(button);
+  buttonChange = true;
 }
