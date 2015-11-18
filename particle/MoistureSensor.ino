@@ -38,40 +38,40 @@ void setup()
 
     // This was just a test: from a terminal enter `particle call aardvark_crazy blink` and it will blink the built-in
     // LED on the Particle
-    // Particle.function("blink", blinkMultiple);
-    Particle.function("resetStepperPos", resetStepperPos);
+    Particle.function("blink", blinkMultiple);
+    Particle.function("remotePos", remotePos);
     Particle.function("remoteStep", remoteStep);
-    // Particle.function("remoteTest", remoteTest);
+    // Particle.function("remoteTest", positionS);
 
-    Particle.function("positionStepper", positionStepper);
+    //Particle.function("", positionS);
     Serial.begin(9600);   // open serial over USB
     Serial.println("Hello Computer");
 }
 
 void loop() {
     m = millis();
+    //positionS(200);
     if (m - last > (1000 * 60 * minutesDelay)) {
         last = m;
         blinkLed(5);  // To indicate that a reading is about to take place
 
         // Provide power to the moisture sensor
         digitalWrite(powerOut, HIGH);
-        delay(100);  // just in case the sensor needs a little time to power up
+        delay(50);  // just in case the sensor needs a little time to power up
         analogValue = analogRead(readMoisture);
         digitalWrite(powerOut, LOW);  // turn off the moisture sensor when not taking a reading, to prevent oxidation
         light = analogRead(readLight);
 
         // To see events in the terminal: `particle subscribe davidws:moisture`
         // The moisture event is currently picked up by IFTTT.com and it sends it to a Google spreadsheet
-        Particle.publish("davidws:moisture", String(analogValue), 240, PRIVATE);
-        Particle.publish("davidws:light", String(light), 240, PRIVATE);
+        //Particle.publish("davidws:moisture", String(analogValue), 240, PRIVATE);
+        // Particle.publish("davidws:light", String(light), 240, PRIVATE);
 
         // To see Serial output in terminal:  `particle serial monitor /dev/tty.usbmodem1411`
         // First use `particle serial list` to see my online device address(es)
         Serial.println(analogValue);
     }
     if (buttonChange) {
-        // Particle.publish("davidws:interrupt", "interrupt", 60, PRIVATE);
         if (buttonStatus == HIGH) {
           blinkLed(2);
         } else {
@@ -97,12 +97,17 @@ void blinkLed(int c) {
     }
 }
 
+int remotePos(String s) {
+  Particle.publish("davidws:test", s, 60, PRIVATE);
+  positionS(s.toInt());
+}
+
 // tell stepper to go to an absolute position
-int positionStepper(String newPos) {
-    int delta = stepperPos - newPos.toInt();
+int positionS(int newPos) {
+    int delta = stepperPos - newPos;
     int direction = delta / abs(delta);
     step(delta, direction);
-    return 1;
+    stepperPos = newPos;
 }
 
 // tell stepper to step n times in a direction, where direction is either a positive or negative number
@@ -123,10 +128,14 @@ void step(int n, int direction) {
 // s is a String which will hold an int for number of steps.
 // Direction of stepping isn't important, at least not now.
 int remoteStep(String s) {
+    int dir = 1;
     RGB.control(true);
     RGB.color(255, 0, 0);
     int c = s.toInt();
-    step(c, 1);
+    if (c < 0) {
+      dir = -1;
+    }
+    step(abs(c), dir);
     RGB.control(false);
 }
 
