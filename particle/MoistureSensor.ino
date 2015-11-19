@@ -9,13 +9,14 @@ int light;
 int ledBoard = D7;
 int readLight = A1;
 int minutesDelay = 2;
-int stepperPos = 0;  // represents the current stepper position
-int stepper = A2;  // CHECK THAT THIS PIN IS SUITABLE
-int stepperDirection = A3; // CHECK THAT THIS PIN IS SUITABLE
+int position = 0;  // represents the current stepper position
+int step = A2;
+int stepperDirection = A3;
 int button = D1;
 int last = 0;
 int m;
 int buttonStatus = 0;
+int direction = A3;
 bool buttonChange = false;
 void buttonChanged(void);
 
@@ -27,9 +28,9 @@ void setup()
     pinMode(ledBoard, OUTPUT);
     pinMode(readLight, INPUT);
     pinMode(readMoisture, INPUT);
-    pinMode(stepper, OUTPUT);
-    pinMode(stepperDirection, OUTPUT);
-    digitalWrite(stepper, LOW);
+    pinMode(step, OUTPUT);
+    pinMode(direction, OUTPUT);
+    //digitalWrite(stepper, LOW);
 
     // Just a test:
     // Publish value to a rest endpoint, also get this via: particle variable get aardvark_crazy analogValue
@@ -39,8 +40,8 @@ void setup()
     // This was just a test: from a terminal enter `particle call aardvark_crazy blink` and it will blink the built-in
     // LED on the Particle
     Particle.function("blink", blinkMultiple);
-    Particle.function("remotePos", remotePos);
-    Particle.function("remoteStep", remoteStep);
+    // Particle.function("remotePos", remotePos);
+    // Particle.function("remoteStep", remoteStep);
     // Particle.function("remoteTest", positionS);
 
     //Particle.function("", positionS);
@@ -71,14 +72,10 @@ void loop() {
         // First use `particle serial list` to see my online device address(es)
         Serial.println(analogValue);
     }
-    if (buttonChange) {
-        if (buttonStatus == HIGH) {
-          blinkLed(2);
-        } else {
-          blinkLed(1);
-        }
-        buttonChange = false;
-    }
+      if (buttonStatus == HIGH) {
+        // blinkLed(2);
+        move(1, HIGH);
+      }
 }
 
 // Particle functions must take a String as an argument and return an int
@@ -97,6 +94,37 @@ void blinkLed(int c) {
     }
 }
 
+// move stepper n steps in dir direction
+// dir = HIGH is CCW when looking down shaft towards motor
+void move(int n, int dir) {
+    digitalWrite(direction, dir);
+    for(int i = 0; i < n; i++) {
+      digitalWrite(step, HIGH);
+      delay(1);
+      digitalWrite(step, LOW);
+      delay(1);
+    }
+    if (dir == HIGH) {
+      position -= n;
+    } else {
+      position += n;
+    }
+    Serial.println(position);
+    Particle.publish("davidws:testing", String(position), 60, PRIVATE);
+}
+
+void moveToPosition(int p) {
+    int dir = HIGH;
+    int delta = position - p;
+    int pol = abs(delta) / delta;
+    if (pol < 0) {
+      dir= LOW;
+    }
+    move(abs(delta), dir);
+    Serial.println("after moveToPosition:");
+    Serial.println(position);
+}
+/*
 int remotePos(String s) {
   Particle.publish("davidws:test", s, 60, PRIVATE);
   positionS(s.toInt());
@@ -124,6 +152,7 @@ void step(int n, int direction) {
     }
 }
 
+
 // For testing, this is a registered Particle function so I can control the stepper remotely.
 // s is a String which will hold an int for number of steps.
 // Direction of stepping isn't important, at least not now.
@@ -139,18 +168,14 @@ int remoteStep(String s) {
     RGB.control(false);
 }
 
-int resetStepperPos(String dummy) {
-    stepperPos = 0;
-    return 1;
-}
-
 int remoteTest(String s) {
     Particle.publish("davidws:test", s, 60, PRIVATE);
 }
+*/
+
 
 // Need a calibration routine to position stepper at the starting position of the gauge
 
 void buttonChanged() {
   buttonStatus = digitalRead(button);
-  buttonChange = true;
 }

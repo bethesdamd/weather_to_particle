@@ -19,14 +19,14 @@ void setup() {
 void loop() {
   digitalWrite(blueLed, HIGH);
   if (go) {
-    move(600, HIGH);
+    moveToPosition(-5400);
     delay(2000);
-    moveToPosition(1200);
     go = false;
     Serial.println("from loop");
   }
 }
 
+// move stepper n steps in dir direction
 // dir = HIGH is CCW when looking down shaft towards motor
 void move(int n, int dir) {
     digitalWrite(direction, dir);
@@ -53,7 +53,6 @@ void moveToPosition(int p) {
       dir= LOW;
     }
     move(abs(delta), dir);
-    position = p;
     Serial.println("after moveToPosition:");
     Serial.println(position);
 }
