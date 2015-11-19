@@ -2,6 +2,8 @@
 // openweathermap.org bethesda city id = 4348599
 // http://api.openweathermap.org/data/2.5/forecast?id=<id>
 
+int UP = HIGH;
+int DOWN = LOW;
 int powerOut = A5;
 int readMoisture = A0;
 int analogValue;
@@ -18,6 +20,8 @@ int m;
 int buttonStatus = 0;
 int direction = A3;
 bool buttonChange = false;
+bool buttonTurnedOff = false;
+bool temp = true;
 void buttonChanged(void);
 
 void setup()
@@ -40,6 +44,7 @@ void setup()
     // This was just a test: from a terminal enter `particle call aardvark_crazy blink` and it will blink the built-in
     // LED on the Particle
     Particle.function("blink", blinkMultiple);
+    Particle.function("remoteMove", remoteMove);
     // Particle.function("remotePos", remotePos);
     // Particle.function("remoteStep", remoteStep);
     // Particle.function("remoteTest", positionS);
@@ -50,8 +55,16 @@ void setup()
 }
 
 void loop() {
+  if(temp) {
+    delay(5000);
+    moveToPosition(200);
+    delay(500);
+    moveToPosition(400);
+    delay(500);
+    moveToPosition(200);
+    temp = false;
+  }
     m = millis();
-    //positionS(200);
     if (m - last > (1000 * 60 * minutesDelay)) {
         last = m;
         blinkLed(5);  // To indicate that a reading is about to take place
@@ -70,12 +83,19 @@ void loop() {
 
         // To see Serial output in terminal:  `particle serial monitor /dev/tty.usbmodem1411`
         // First use `particle serial list` to see my online device address(es)
-        Serial.println(analogValue);
+        // Serial.println(analogValue);
     }
-      if (buttonStatus == HIGH) {
-        // blinkLed(2);
-        move(1, HIGH);
-      }
+
+    if (buttonStatus == HIGH) {
+      move(1, DOWN);
+    }
+
+    if (buttonTurnedOff) {
+      position = 0;
+      Serial.println("calibration button is now off");
+      Serial.println(position);
+      buttonTurnedOff = false;
+    }
 }
 
 // Particle functions must take a String as an argument and return an int
@@ -99,31 +119,46 @@ void blinkLed(int c) {
 void move(int n, int dir) {
     digitalWrite(direction, dir);
     for(int i = 0; i < n; i++) {
-      digitalWrite(step, HIGH);
+      digitalWrite(step, UP);
       delay(1);
-      digitalWrite(step, LOW);
+      digitalWrite(step, DOWN);
       delay(1);
     }
-    if (dir == HIGH) {
-      position -= n;
-    } else {
+    if (dir == UP) {
       position += n;
+    } else {
+      position -= n;
     }
-    Serial.println(position);
+    // Serial.println(position);
     Particle.publish("davidws:testing", String(position), 60, PRIVATE);
 }
 
 void moveToPosition(int p) {
-    int dir = HIGH;
-    int delta = position - p;
+    Serial.println("before moveToPosition:");
+    Serial.println(position);
+    int dir = DOWN;
+    int delta = p - position;
     int pol = abs(delta) / delta;
-    if (pol < 0) {
-      dir= LOW;
+    if (pol > 0) {
+      dir= UP;
     }
     move(abs(delta), dir);
     Serial.println("after moveToPosition:");
     Serial.println(position);
 }
+
+int remoteMove(String i) {
+  moveToPosition(i.toInt());
+}
+
+void buttonChanged() {
+  buttonStatus = digitalRead(button);
+  if (buttonStatus == LOW) {
+    buttonTurnedOff = true;
+  }
+}
+
+
 /*
 int remotePos(String s) {
   Particle.publish("davidws:test", s, 60, PRIVATE);
@@ -175,7 +210,3 @@ int remoteTest(String s) {
 
 
 // Need a calibration routine to position stepper at the starting position of the gauge
-
-void buttonChanged() {
-  buttonStatus = digitalRead(button);
-}
